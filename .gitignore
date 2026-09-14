@@ -1,0 +1,13 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Configuration locale
+.env
+.env.*
+!.env.example
+
+# React
+node_modules/
+dist/
