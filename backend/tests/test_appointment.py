@@ -4,6 +4,9 @@ from app.crud.appointment import create_appointment
 from app.models import Availability, Service
 from app.schemas import AppointmentCreate
 
+import pytest
+from fastapi import HTTPException
+
 
 
 def test_create_valid_appointment(
@@ -53,3 +56,64 @@ def test_create_valid_appointment(
     assert appointment.start_datetime == datetime(2026, 9, 28, 14, 0)
     assert appointment.end_datetime == datetime(2026, 9, 28, 14, 45)
     assert appointment.status == "confirmed"
+
+def test_create_overlapping_appointment_is_rejected(
+    db_session,
+    business_and_staff,
+):
+    business, staff_member = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Coupe femme",
+        duration_minutes=45,
+        price=35,
+    )
+
+    availability = Availability(
+        business_id=business.id,
+        staff_member_id=staff_member.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add_all([service, availability])
+    db_session.commit()
+    db_session.refresh(service)
+
+    first_appointment = AppointmentCreate(
+        service_id=service.id,
+        staff_member_id=staff_member.id,
+        customer_name="Client 1",
+        customer_email="client1@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    create_appointment(
+        db_session,
+        business.id,
+        first_appointment,
+    )
+
+    overlapping_appointment = AppointmentCreate(
+        service_id=service.id,
+        staff_member_id=staff_member.id,
+        customer_name="Client 2",
+        customer_email="client2@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 15),
+    )
+
+    with pytest.raises(HTTPException) as exception:
+        create_appointment(
+            db_session,
+            business.id,
+            overlapping_appointment,
+        )
+
+    assert exception.value.status_code == 409
+    assert (
+        exception.value.detail
+        == "Staff member already has an appointment during this time"
+    )
+    
