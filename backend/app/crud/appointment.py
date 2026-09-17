@@ -1,17 +1,20 @@
 from datetime import timedelta
 
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import (
-    Appointment,
-    Availability,
-    Business,
-    Service,
-    StaffMember,
-    Absence,
-)
+from app.models import Appointment
+
 from app.schemas import AppointmentCreate
+
+from app.services.business_service import get_business_or_404
+from app.services.service_catalog import get_service_or_404
+from app.services.staff_service import get_staff_member_or_404
+from app.services.scheduling_service import (
+    check_appointment_conflict,
+    check_staff_absence,
+    check_staff_availability,
+)
+
 
 
 def create_appointment(
@@ -21,115 +24,52 @@ def create_appointment(
 ) -> Appointment:
 
     # Vérifier que l'entreprise existe
-    business = db.get(Business, business_id)
+    get_business_or_404(
+        db,
+        business_id,
+    )
 
-    if business is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Business not found",
-        )
-
-    staff_member = db.get(
-        StaffMember,
+    get_staff_member_or_404(
+        db,
+        business_id,
         appointment.staff_member_id,
     )
 
-    if staff_member is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Staff member not found",
-        )
-
-    if staff_member.business_id != business_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Staff member does not belong to this business",
-        )
-
-    if not staff_member.active:
-        raise HTTPException(
-            status_code=409,
-            detail="Staff member is inactive",
-        )
-
     # Vérifier que la prestation existe
-    service = db.get(Service, appointment.service_id)
-
-    if service is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Service not found",
-        )
-
-    # Vérifier que la prestation appartient bien à cette entreprise
-    if service.business_id != business_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Service does not belong to this business",
-        )
+    service = get_service_or_404(
+        db,
+        business_id,
+        appointment.service_id,
+    )
 
     # Calculer automatiquement l'heure de fin
     end_datetime = appointment.start_datetime + timedelta(
         minutes=service.duration_minutes
     )
 
-    # Vérifier que le rendez-vous est dans les horaires d'ouverture
-    weekday = appointment.start_datetime.weekday()
-
-    availability = (
-        db.query(Availability)
-        .filter(
-            Availability.business_id == business_id,
-            Availability.staff_member_id == appointment.staff_member_id,
-            Availability.weekday == weekday,
-            Availability.start_time <= appointment.start_datetime.time(),
-            Availability.end_time >= end_datetime.time(),
-        )
-        .first()
+    check_staff_availability(
+        db,
+        business_id,
+        appointment.staff_member_id,
+        appointment.start_datetime,
+        end_datetime,
     )
 
-    if availability is None:
-        raise HTTPException(
-            status_code=409,
-            detail="Appointment is outside staff member availability",
-        )
-
-
-    absence = (
-        db.query(Absence)
-        .filter(
-            Absence.business_id == business_id,
-            Absence.staff_member_id == appointment.staff_member_id,
-            Absence.start_datetime < end_datetime,
-            Absence.end_datetime > appointment.start_datetime,
-        )
-        .first()
+    check_staff_absence(
+        db,
+        business_id,
+        appointment.staff_member_id,
+        appointment.start_datetime,
+        end_datetime,
     )
 
-    if absence:
-        raise HTTPException(
-            status_code=409,
-            detail="Staff member is unavailable during this time",
-        )
-
-
-    overlapping_appointment = (
-        db.query(Appointment)
-        .filter(
-            Appointment.business_id == business_id,
-            Appointment.staff_member_id == appointment.staff_member_id,
-            Appointment.status != "cancelled",
-            Appointment.start_datetime < end_datetime,
-            Appointment.end_datetime > appointment.start_datetime,
-        )
-        .first()
+    check_appointment_conflict(
+        db,
+        business_id,
+        appointment.staff_member_id,
+        appointment.start_datetime,
+        end_datetime,
     )
-
-    if overlapping_appointment:
-        raise HTTPException(
-            status_code=409,
-            detail="Staff member already has an appointment during this time",
-        )
 
     # Créer le rendez-vous
     db_appointment = Appointment(

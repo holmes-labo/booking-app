@@ -15,6 +15,11 @@ from app.crud.absence import (
     get_absences_by_staff_member,
 )
 
+from app.crud.schedule_override import (
+    create_schedule_override,
+    get_schedule_overrides_by_staff_member,
+)
+
 __all__ = [
     "create_business",
     "get_businesses",
@@ -25,4 +30,6 @@ __all__ = [
     "get_staff_members_by_business",
     "create_absence",
     "get_absences_by_staff_member",
+    "create_schedule_override",
+    "get_schedule_overrides_by_staff_member",
 ]

@@ -4,6 +4,10 @@ from app.schemas.availability import AvailabilityCreate, AvailabilityRead
 from app.schemas.appointment import AppointmentCreate, AppointmentRead
 from app.schemas.staff_member import StaffMemberCreate, StaffMemberRead
 from app.schemas.absence import AbsenceCreate, AbsenceRead
+from app.schemas.schedule_override import (
+    ScheduleOverrideCreate,
+    ScheduleOverrideRead,
+)
 
 __all__ = [
     "BusinessCreate",
@@ -17,5 +21,5 @@ __all__ = [
     "StaffMemberCreate",
     "StaffMemberRead",
     "AbsenceCreate",
-    "AbsenceRead"
+    "AbsenceRead",
 ]
