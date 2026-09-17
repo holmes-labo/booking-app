@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.database import engine
-from app.models import Base
 
 from app.routers import (
     appointment,
@@ -24,9 +23,6 @@ app.include_router(appointment.router)
 app.include_router(staff_member.router)
 app.include_router(absence.router)
 
-@app.on_event("startup")
-def startup():
-    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/health")
