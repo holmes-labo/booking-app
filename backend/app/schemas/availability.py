@@ -21,9 +21,8 @@ class AvailabilityCreate(BaseModel):
 class AvailabilityRead(AvailabilityCreate):
     id: int
     business_id: int
+    staff_member_id: int
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 

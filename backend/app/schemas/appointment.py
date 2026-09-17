@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 
 class AppointmentCreate(BaseModel):
     service_id: int
+    staff_member_id: int
     customer_name: str
     customer_email: EmailStr
     customer_phone: str | None = None

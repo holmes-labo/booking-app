@@ -3,6 +3,8 @@ from app.models.business import Business
 from app.models.service import Service
 from app.models.availability import Availability
 from app.models.appointment import Appointment
+from app.models.staff_member import StaffMember
+from app.models.absence import Absence
 
 __all__ = [
     "Base",

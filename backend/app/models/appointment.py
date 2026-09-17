@@ -21,6 +21,11 @@ class Appointment(Base):
         nullable=False,
     )
 
+    staff_member_id: Mapped[int] = mapped_column(
+        ForeignKey("staff_members.id"),
+        nullable=False,
+    )
+
     customer_name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,

@@ -3,7 +3,15 @@ from sqlalchemy import text
 
 from app.database import engine
 from app.models import Base
-from app.routers import appointment, availability, business, service
+
+from app.routers import (
+    appointment,
+    availability,
+    business,
+    service,
+    staff_member,
+    absence,
+)
 
 app = FastAPI(title="Booking API")
 
@@ -11,7 +19,8 @@ app.include_router(business.router)
 app.include_router(service.router)
 app.include_router(availability.router)
 app.include_router(appointment.router)
-
+app.include_router(staff_member.router)
+app.include_router(absence.router)
 
 @app.on_event("startup")
 def startup():
