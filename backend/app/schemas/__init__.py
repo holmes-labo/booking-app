@@ -8,6 +8,9 @@ from app.schemas.schedule_override import (
     ScheduleOverrideCreate,
     ScheduleOverrideRead,
 )
+from app.schemas.staff_service import StaffServiceRead
+
+
 
 __all__ = [
     "BusinessCreate",
@@ -22,4 +25,5 @@ __all__ = [
     "StaffMemberRead",
     "AbsenceCreate",
     "AbsenceRead",
+    "StaffServiceRead"
 ]

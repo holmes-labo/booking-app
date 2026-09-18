@@ -8,7 +8,10 @@ from app.schemas import AppointmentCreate
 
 from app.services.business_service import get_business_or_404
 from app.services.service_catalog import get_service_or_404
-from app.services.staff_service import get_staff_member_or_404
+from app.services.staff_service import (
+    check_staff_can_perform_service,
+    get_staff_member_or_404,
+)
 from app.services.scheduling_service import (
     check_appointment_conflict,
     check_staff_absence,
@@ -39,6 +42,12 @@ def create_appointment(
     service = get_service_or_404(
         db,
         business_id,
+        appointment.service_id,
+    )
+
+    check_staff_can_perform_service(
+        db,
+        appointment.staff_member_id,
         appointment.service_id,
     )
 

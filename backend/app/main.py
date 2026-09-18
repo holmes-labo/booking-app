@@ -11,6 +11,7 @@ from app.routers import (
     service,
     staff_member,
     absence,
+    staff_service,
 )
 
 app = FastAPI(title="Booking API")
@@ -22,6 +23,7 @@ app.include_router(schedule_override.router)
 app.include_router(appointment.router)
 app.include_router(staff_member.router)
 app.include_router(absence.router)
+app.include_router(staff_service.router)
 
 
 

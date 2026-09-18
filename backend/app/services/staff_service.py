@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import StaffMember
+from app.models import StaffMember, StaffService
 
 
 def get_staff_member_or_404(
@@ -31,3 +31,20 @@ def get_staff_member_or_404(
         )
 
     return staff_member
+
+def check_staff_can_perform_service(
+    db: Session,
+    staff_member_id: int,
+    service_id: int,
+) -> None:
+
+    assignment = db.get(
+        StaffService,
+        (staff_member_id, service_id),
+    )
+
+    if assignment is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Staff member cannot perform this service",
+        )
