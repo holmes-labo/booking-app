@@ -1,7 +1,13 @@
 from datetime import datetime, time
 
 from app.crud.appointment import create_appointment
-from app.models import Availability, Service, StaffService
+from app.models import (
+    Appointment,
+    Availability,
+    Service,
+    StaffMember,
+    StaffService,
+)
 from app.schemas import AppointmentCreate
 
 import pytest
@@ -179,3 +185,333 @@ def test_create_appointment_is_rejected_when_service_not_assigned_to_staff(
         exception.value.detail
         == "Staff member cannot perform this service"
     )
+
+
+def test_customer_choice_requires_staff_member(
+    db_session,
+    business_and_staff,
+):
+    business, _ = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Consultation spécialisée",
+        duration_minutes=45,
+        price=50,
+        staff_assignment_mode="customer_choice",
+    )
+
+    db_session.add(service)
+    db_session.commit()
+    db_session.refresh(service)
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    with pytest.raises(HTTPException) as exception:
+        create_appointment(
+            db_session,
+            business.id,
+            appointment_data,
+        )
+
+    assert exception.value.status_code == 422
+    assert (
+        exception.value.detail
+        == "A staff member must be selected for this service"
+    )
+
+
+def test_automatic_mode_assigns_available_staff_member(
+    db_session,
+    business_and_staff,
+):
+    business, staff_member = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Révision",
+        duration_minutes=45,
+        price=50,
+        staff_assignment_mode="automatic",
+    )
+
+    db_session.add(service)
+    db_session.commit()
+    db_session.refresh(service)
+
+    staff_service = StaffService(
+        staff_member_id=staff_member.id,
+        service_id=service.id,
+    )
+
+    availability = Availability(
+        business_id=business.id,
+        staff_member_id=staff_member.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add_all([staff_service, availability])
+    db_session.commit()
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    appointment = create_appointment(
+        db_session,
+        business.id,
+        appointment_data,
+    )
+
+    assert appointment.staff_member_id == staff_member.id
+
+
+def test_automatic_mode_skips_unavailable_staff_member(
+    db_session,
+    business_and_staff,
+):
+    business, first_staff = business_and_staff
+
+    second_staff = StaffMember(
+        business_id=business.id,
+        first_name="Thomas",
+        active=True,
+    )
+
+    service = Service(
+        business_id=business.id,
+        name="Révision",
+        duration_minutes=45,
+        price=50,
+        staff_assignment_mode="automatic",
+    )
+
+    db_session.add_all([second_staff, service])
+    db_session.commit()
+    db_session.refresh(second_staff)
+    db_session.refresh(service)
+
+    db_session.add_all([
+        StaffService(
+            staff_member_id=first_staff.id,
+            service_id=service.id,
+        ),
+        StaffService(
+            staff_member_id=second_staff.id,
+            service_id=service.id,
+        ),
+        Availability(
+            business_id=business.id,
+            staff_member_id=first_staff.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
+        Availability(
+            business_id=business.id,
+            staff_member_id=second_staff.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
+    ])
+
+    db_session.commit()
+
+    # Le premier professionnel est déjà occupé à 14 h.
+    existing_appointment = Appointment(
+        business_id=business.id,
+        service_id=service.id,
+        staff_member_id=first_staff.id,
+        customer_name="Client existant",
+        customer_email="existing@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+        end_datetime=datetime(2026, 9, 28, 14, 45),
+        status="confirmed",
+    )
+
+    db_session.add(existing_appointment)
+    db_session.commit()
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        customer_name="Nouveau client",
+        customer_email="new@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    appointment = create_appointment(
+        db_session,
+        business.id,
+        appointment_data,
+    )
+
+    assert appointment.staff_member_id == second_staff.id
+
+
+def test_automatic_mode_rejects_when_no_staff_member_is_available(
+    db_session,
+    business_and_staff,
+):
+    business, staff_member = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Révision",
+        duration_minutes=45,
+        price=50,
+        staff_assignment_mode="automatic",
+    )
+
+    db_session.add(service)
+    db_session.commit()
+    db_session.refresh(service)
+
+    staff_service = StaffService(
+        staff_member_id=staff_member.id,
+        service_id=service.id,
+    )
+
+    # L'employé travaille uniquement le matin.
+    availability = Availability(
+        business_id=business.id,
+        staff_member_id=staff_member.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(12, 0),
+    )
+
+    db_session.add_all([staff_service, availability])
+    db_session.commit()
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    with pytest.raises(HTTPException) as exception:
+        create_appointment(
+            db_session,
+            business.id,
+            appointment_data,
+        )
+
+    assert exception.value.status_code == 409
+    assert (
+        exception.value.detail
+        == "No staff member is available for this time slot"
+    )
+
+
+
+def test_optional_mode_respects_customer_staff_choice(
+    db_session,
+    business_and_staff,
+):
+    business, chosen_staff = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Coupe femme",
+        duration_minutes=45,
+        price=35,
+        staff_assignment_mode="optional",
+    )
+
+    db_session.add(service)
+    db_session.commit()
+    db_session.refresh(service)
+
+    db_session.add_all([
+        StaffService(
+            staff_member_id=chosen_staff.id,
+            service_id=service.id,
+        ),
+        Availability(
+            business_id=business.id,
+            staff_member_id=chosen_staff.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
+    ])
+
+    db_session.commit()
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        staff_member_id=chosen_staff.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    appointment = create_appointment(
+        db_session,
+        business.id,
+        appointment_data,
+    )
+
+    assert appointment.staff_member_id == chosen_staff.id
+
+
+def test_optional_mode_assigns_staff_when_customer_has_no_preference(
+    db_session,
+    business_and_staff,
+):
+    business, staff_member = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Coupe femme",
+        duration_minutes=45,
+        price=35,
+        staff_assignment_mode="optional",
+    )
+
+    db_session.add(service)
+    db_session.commit()
+    db_session.refresh(service)
+
+    db_session.add_all([
+        StaffService(
+            staff_member_id=staff_member.id,
+            service_id=service.id,
+        ),
+        Availability(
+            business_id=business.id,
+            staff_member_id=staff_member.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
+    ])
+
+    db_session.commit()
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    appointment = create_appointment(
+        db_session,
+        business.id,
+        appointment_data,
+    )
+
+    assert appointment.staff_member_id == staff_member.id

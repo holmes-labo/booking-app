@@ -16,6 +16,12 @@ class Service(Base):
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
 
+    staff_assignment_mode: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="optional",
+    )
+
     business: Mapped["Business"] = relationship(
         "Business",
         back_populates="services",

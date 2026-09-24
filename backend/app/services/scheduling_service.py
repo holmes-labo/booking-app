@@ -100,3 +100,42 @@ def check_appointment_conflict(
             status_code=409,
             detail="Staff member already has an appointment during this time",
         )
+
+
+def is_staff_available_for_appointment(
+    db: Session,
+    business_id: int,
+    staff_member_id: int,
+    start_datetime: datetime,
+    end_datetime: datetime,
+) -> bool:
+
+    try:
+        check_staff_availability(
+            db,
+            business_id,
+            staff_member_id,
+            start_datetime,
+            end_datetime,
+        )
+
+        check_staff_absence(
+            db,
+            business_id,
+            staff_member_id,
+            start_datetime,
+            end_datetime,
+        )
+
+        check_appointment_conflict(
+            db,
+            business_id,
+            staff_member_id,
+            start_datetime,
+            end_datetime,
+        )
+
+    except HTTPException:
+        return False
+
+    return True

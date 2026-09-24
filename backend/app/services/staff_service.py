@@ -48,3 +48,28 @@ def check_staff_can_perform_service(
             status_code=409,
             detail="Staff member cannot perform this service",
         )
+
+
+def get_staff_members_for_service(
+    db: Session,
+    business_id: int,
+    service_id: int,
+) -> list[StaffMember]:
+
+    return (
+        db.query(StaffMember)
+        .join(
+            StaffService,
+            StaffService.staff_member_id == StaffMember.id,
+        )
+        .filter(
+            StaffMember.business_id == business_id,
+            StaffMember.active.is_(True),
+            StaffService.service_id == service_id,
+        )
+        .order_by(
+            StaffMember.first_name,
+            StaffMember.last_name,
+        )
+        .all()
+    )

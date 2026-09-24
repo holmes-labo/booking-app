@@ -14,6 +14,7 @@ def create_service(
         name=service.name,
         duration_minutes=service.duration_minutes,
         price=service.price,
+        staff_assignment_mode=service.staff_assignment_mode,
     )
 
     db.add(db_service)

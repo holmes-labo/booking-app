@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from fastapi import HTTPException
+
 from sqlalchemy.orm import Session
 
 from app.models import Appointment
@@ -11,11 +13,13 @@ from app.services.service_catalog import get_service_or_404
 from app.services.staff_service import (
     check_staff_can_perform_service,
     get_staff_member_or_404,
+    get_staff_members_for_service,
 )
 from app.services.scheduling_service import (
     check_appointment_conflict,
     check_staff_absence,
     check_staff_availability,
+    is_staff_available_for_appointment,
 )
 
 
@@ -32,12 +36,6 @@ def create_appointment(
         business_id,
     )
 
-    get_staff_member_or_404(
-        db,
-        business_id,
-        appointment.staff_member_id,
-    )
-
     # Vérifier que la prestation existe
     service = get_service_or_404(
         db,
@@ -45,9 +43,62 @@ def create_appointment(
         appointment.service_id,
     )
 
+    staff_member_id = appointment.staff_member_id
+
+    if (
+        service.staff_assignment_mode == "customer_choice"
+        and appointment.staff_member_id is None
+    ):
+
+        raise HTTPException(
+            status_code=422,
+            detail="A staff member must be selected for this service",
+        )
+
+    if (
+        service.staff_assignment_mode in ("automatic", "optional")
+        and staff_member_id is None
+    ):
+        end_datetime = appointment.start_datetime + timedelta(
+            minutes=service.duration_minutes
+        )
+
+        candidates = get_staff_members_for_service(
+            db,
+            business_id,
+            appointment.service_id,
+        )
+
+        selected_staff_member = None
+
+        for candidate in candidates:
+            if is_staff_available_for_appointment(
+                db,
+                business_id,
+                candidate.id,
+                appointment.start_datetime,
+                end_datetime,
+            ):
+                selected_staff_member = candidate
+                break
+
+        if selected_staff_member is None:
+            raise HTTPException(
+                status_code=409,
+                detail="No staff member is available for this time slot",
+            )  
+        
+        staff_member_id = selected_staff_member.id
+
+    get_staff_member_or_404(
+        db,
+        business_id,
+        staff_member_id,
+    )
+
     check_staff_can_perform_service(
         db,
-        appointment.staff_member_id,
+        staff_member_id,
         appointment.service_id,
     )
 
@@ -59,7 +110,7 @@ def create_appointment(
     check_staff_availability(
         db,
         business_id,
-        appointment.staff_member_id,
+        staff_member_id,
         appointment.start_datetime,
         end_datetime,
     )
@@ -67,7 +118,7 @@ def create_appointment(
     check_staff_absence(
         db,
         business_id,
-        appointment.staff_member_id,
+        staff_member_id,
         appointment.start_datetime,
         end_datetime,
     )
@@ -75,7 +126,7 @@ def create_appointment(
     check_appointment_conflict(
         db,
         business_id,
-        appointment.staff_member_id,
+        staff_member_id,
         appointment.start_datetime,
         end_datetime,
     )
@@ -84,7 +135,7 @@ def create_appointment(
     db_appointment = Appointment(
         business_id=business_id,
         service_id=appointment.service_id,
-        staff_member_id=appointment.staff_member_id,
+        staff_member_id=staff_member_id,
         customer_name=appointment.customer_name,
         customer_email=appointment.customer_email,
         customer_phone=appointment.customer_phone,
