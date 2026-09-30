@@ -196,27 +196,43 @@ def test_schedule_override_allows_appointment(
     )
 
 
-def test_schedule_override_allows_appointment(
+
+def test_schedule_override_replaces_weekly_availability(
     db_session,
     business_and_staff,
 ):
     business, staff_member = business_and_staff
 
+    availability = Availability(
+        business_id=business.id,
+        staff_member_id=staff_member.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
     schedule_override = ScheduleOverride(
         business_id=business.id,
         staff_member_id=staff_member.id,
-        date=datetime(2026, 9, 29).date(),
-        start_time=time(9, 0),
-        end_time=time(12, 0),
+        date=datetime(2026, 9, 28).date(),
+        start_time=time(14, 0),
+        end_time=time(17, 0),
     )
 
-    db_session.add(schedule_override)
+    db_session.add_all([availability, schedule_override])
     db_session.commit()
 
-    check_staff_availability(
-        db_session,
-        business.id,
-        staff_member.id,
-        datetime(2026, 9, 29, 10, 0),
-        datetime(2026, 9, 29, 10, 45),
+    with pytest.raises(HTTPException) as exception:
+        check_staff_availability(
+            db_session,
+            business.id,
+            staff_member.id,
+            datetime(2026, 9, 28, 10, 0),
+            datetime(2026, 9, 28, 10, 45),
+        )
+
+    assert exception.value.status_code == 409
+    assert (
+        exception.value.detail
+        == "Appointment is outside staff member availability"
     )

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.crud import create_service, get_services_by_business
+from app.crud import create_service, delete_service, get_services_by_business
 from app.dependencies import get_db
 from app.schemas import ServiceCreate, ServiceRead
 
@@ -26,3 +26,11 @@ def get_services_endpoint(
     db: Session = Depends(get_db),
 ):
     return get_services_by_business(db, business_id)
+
+@router.delete("/{service_id}", status_code=204)
+def delete_service_endpoint(
+    business_id: int,
+    service_id: int,
+    db: Session = Depends(get_db),
+):
+    delete_service(db, business_id, service_id)

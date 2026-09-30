@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from app.models import Service
 from app.schemas import ServiceCreate
@@ -33,3 +34,26 @@ def get_services_by_business(
         .filter(Service.business_id == business_id)
         .all()
     )
+
+
+def delete_service(
+    db: Session,
+    business_id: int,
+    service_id: int,
+) -> None:
+    service = db.get(Service, service_id)
+
+    if service is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Service not found",
+        )
+
+    if service.business_id != business_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Service does not belong to this business",
+        )
+
+    db.delete(service)
+    db.commit()

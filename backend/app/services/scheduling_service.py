@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -17,34 +17,50 @@ def check_staff_availability(
     start_datetime: datetime,
     end_datetime: datetime,
 ) -> None:
-
-    weekday = start_datetime.weekday()
-
-    schedule_override = (
+    schedule_overrides = (
         db.query(ScheduleOverride)
         .filter(
             ScheduleOverride.business_id == business_id,
             ScheduleOverride.staff_member_id == staff_member_id,
             ScheduleOverride.date == start_datetime.date(),
-            ScheduleOverride.start_time <= start_datetime.time(),
-            ScheduleOverride.end_time >= end_datetime.time(),
         )
-        .first()
+        .all()
     )
+
+    if schedule_overrides:
+        matching_override = next(
+            (
+                override
+                for override in schedule_overrides
+                if (
+                    override.start_time <= start_datetime.time()
+                    and override.end_time >= end_datetime.time()
+                )
+            ),
+            None,
+        )
+
+        if matching_override is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Appointment is outside staff member availability",
+            )
+
+        return
 
     availability = (
         db.query(Availability)
         .filter(
             Availability.business_id == business_id,
             Availability.staff_member_id == staff_member_id,
-            Availability.weekday == weekday,
+            Availability.weekday == start_datetime.weekday(),
             Availability.start_time <= start_datetime.time(),
             Availability.end_time >= end_datetime.time(),
         )
         .first()
     )
 
-    if availability is None and schedule_override is None:
+    if availability is None:
         raise HTTPException(
             status_code=409,
             detail="Appointment is outside staff member availability",
@@ -139,3 +155,43 @@ def is_staff_available_for_appointment(
         return False
 
     return True
+
+
+def get_staff_schedule_for_date(
+    db: Session,
+    business_id: int,
+    staff_member_id: int,
+    target_date: date,
+) -> list[tuple]:
+    schedule_overrides = (
+        db.query(ScheduleOverride)
+        .filter(
+            ScheduleOverride.business_id == business_id,
+            ScheduleOverride.staff_member_id == staff_member_id,
+            ScheduleOverride.date == target_date,
+        )
+        .order_by(ScheduleOverride.start_time)
+        .all()
+    )
+
+    if schedule_overrides:
+        return [
+            (override.start_time, override.end_time)
+            for override in schedule_overrides
+        ]
+
+    availabilities = (
+        db.query(Availability)
+        .filter(
+            Availability.business_id == business_id,
+            Availability.staff_member_id == staff_member_id,
+            Availability.weekday == target_date.weekday(),
+        )
+        .order_by(Availability.start_time)
+        .all()
+    )
+
+    return [
+        (availability.start_time, availability.end_time)
+        for availability in availabilities
+    ]

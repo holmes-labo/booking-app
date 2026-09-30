@@ -1,5 +1,9 @@
 from app.crud.business import create_business, get_businesses
-from app.crud.service import create_service, get_services_by_business
+from app.crud.service import (
+    create_service,
+    delete_service,
+    get_services_by_business,
+)
 from app.crud.availability import (
     create_availability,
     get_availabilities_by_staff_member,
@@ -32,4 +36,7 @@ __all__ = [
     "get_absences_by_staff_member",
     "create_schedule_override",
     "get_schedule_overrides_by_staff_member",
+    "create_service",
+    "delete_service",
+    "get_services_by_business",
 ]

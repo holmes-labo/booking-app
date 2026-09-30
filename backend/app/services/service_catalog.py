@@ -9,7 +9,6 @@ def get_service_or_404(
     business_id: int,
     service_id: int,
 ) -> Service:
-
     service = db.get(Service, service_id)
 
     if service is None:

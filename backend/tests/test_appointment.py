@@ -515,3 +515,43 @@ def test_optional_mode_assigns_staff_when_customer_has_no_preference(
     )
 
     assert appointment.staff_member_id == staff_member.id
+
+
+def test_automatic_mode_rejects_customer_staff_choice(
+    db_session,
+    business_and_staff,
+):
+    business, staff_member = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Révision",
+        duration_minutes=45,
+        price=50,
+        staff_assignment_mode="automatic",
+    )
+
+    db_session.add(service)
+    db_session.commit()
+    db_session.refresh(service)
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        staff_member_id=staff_member.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 14, 0),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_appointment(
+            db_session,
+            business.id,
+            appointment_data,
+        )
+
+    assert exc_info.value.status_code == 422
+    assert (
+        exc_info.value.detail
+        == "A staff member cannot be selected for this service"
+    )

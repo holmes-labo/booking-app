@@ -46,6 +46,15 @@ def create_appointment(
     staff_member_id = appointment.staff_member_id
 
     if (
+        service.staff_assignment_mode == "automatic"
+        and staff_member_id is not None
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="A staff member cannot be selected for this service",
+        )
+
+    if (
         service.staff_assignment_mode == "customer_choice"
         and appointment.staff_member_id is None
     ):
