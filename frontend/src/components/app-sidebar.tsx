@@ -38,12 +38,12 @@ export function AppSidebar({
   const navMain = [
     {
       title: t("navigation.dashboard"),
-      url: "#",
+      url: "/admin",
       icon: <LayoutDashboardIcon />,
     },
     {
       title: t("navigation.calendar"),
-      url: "#",
+      url: "/admin/agenda",
       icon: <CalendarDaysIcon />,
     },
     {
