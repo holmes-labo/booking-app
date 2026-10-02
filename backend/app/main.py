@@ -8,6 +8,7 @@ from app.routers import (
     appointment,
     availability,
     business,
+    dashboard,
     schedule_override,
     service,
     staff_member,
@@ -26,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(business.router)
+app.include_router(dashboard.router)
 app.include_router(service.router)
 app.include_router(availability.router)
 app.include_router(schedule_override.router)
@@ -33,6 +35,7 @@ app.include_router(appointment.router)
 app.include_router(staff_member.router)
 app.include_router(absence.router)
 app.include_router(staff_service.router)
+
 
 
 
