@@ -1,35 +1,31 @@
-import { useEffect, useState } from 'react'
-
-type Service = {
-  id: number
-  business_id: number
-  name: string
-  duration_minutes: number
-  price: number
-  staff_assignment_mode: 'customer_choice' | 'automatic' | 'optional'
-}
+import { AppSidebar } from '@/components/app-sidebar'
+import { SiteHeader } from '@/components/site-header'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { SectionCards } from '@/components/section-cards'
 
 function App() {
-  const [services, setServices] = useState<Service[]>([])
-
-  useEffect(() => {
-    fetch('http://localhost:8000/businesses/1/services')
-      .then((response) => response.json())
-      .then((data) => setServices(data))
-  }, [])
-
   return (
-    <main>
-      <h1>Prendre rendez-vous</h1>
+    <TooltipProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <SiteHeader />
 
-      {services.map((service) => (
-        <div key={service.id}>
-          <h2>{service.name}</h2>
-          <p>{service.duration_minutes} minutes</p>
-          <p>{service.price} €</p>
-        </div>
-      ))}
-    </main>
+          <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+            <h1 className="text-2xl font-semibold">
+              Tableau de bord
+            </h1>
+
+            <p className="text-muted-foreground">
+              Votre activité en un coup d'œil.
+            </p>
+
+            <SectionCards />
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   )
 }
 

@@ -1,0 +1,19 @@
+{
+  "booking": {
+    "title": "Book an appointment",
+    "chooseService": "Choose a service to get started."
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "calendar": "Calendar",
+    "appointments": "Appointments",
+    "clients": "Clients",
+    "services": "Services",
+    "team": "Team",
+    "billing": "Billing",
+    "stock": "Inventory",
+    "settings": "Settings",
+    "help": "Help",
+    "search": "Search"
+  }
+}

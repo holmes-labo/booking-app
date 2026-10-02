@@ -1,0 +1,19 @@
+{
+  "booking": {
+    "title": "Reservar cita",
+    "chooseService": "Elige un servicio para empezar."
+  },
+  "navigation": {
+    "dashboard": "Panel de control",
+    "calendar": "Agenda",
+    "appointments": "Citas",
+    "clients": "Clientes",
+    "services": "Servicios",
+    "team": "Equipo",
+    "billing": "Facturación",
+    "stock": "Inventario",
+    "settings": "Configuración",
+    "help": "Ayuda",
+    "search": "Buscar"
+  }
+}

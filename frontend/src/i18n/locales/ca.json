@@ -1,0 +1,19 @@
+{
+  "booking": {
+    "title": "Demanar cita",
+    "chooseService": "Tria un servei per començar."
+  },
+  "navigation": {
+    "dashboard": "Tauler de control",
+    "calendar": "Agenda",
+    "appointments": "Cites",
+    "clients": "Clients",
+    "services": "Serveis",
+    "team": "Equip",
+    "billing": "Facturació",
+    "stock": "Inventari",
+    "settings": "Configuració",
+    "help": "Ajuda",
+    "search": "Cercar"
+  }
+}

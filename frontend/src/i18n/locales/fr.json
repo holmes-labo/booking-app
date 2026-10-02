@@ -1,0 +1,25 @@
+{
+  "booking": {
+    "title": "Prendre rendez-vous",
+    "chooseService": "Choisissez une prestation pour commencer."
+  },
+  "navigation": {
+    "dashboard": "Tableau de bord",
+    "calendar": "Agenda",
+    "appointments": "Rendez-vous",
+    "clients": "Clients",
+    "services": "Services",
+    "team": "Équipe",
+    "billing": "Facturation",
+    "stock": "Stock",
+    "settings": "Paramètres",
+    "help": "Aide",
+    "search": "Rechercher"
+  },
+  "dashboard": {
+    "appointmentsToday": "Rendez-vous aujourd'hui",
+    "revenueToday": "Chiffre d'affaires aujourd'hui",
+    "clientsToday": "Clients aujourd'hui",
+    "occupancyRate": "Taux d'occupation"
+  }
+}
