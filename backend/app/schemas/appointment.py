@@ -21,3 +21,10 @@ class AppointmentRead(AppointmentCreate):
     model_config = {
         "from_attributes": True
     }
+
+class AppointmentAgendaRead(AppointmentRead):
+    """Rendez-vous enrichi avec les informations utiles à l'agenda."""
+
+    service_name: str
+    staff_first_name: str
+    staff_last_name: str | None = None

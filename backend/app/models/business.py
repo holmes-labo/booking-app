@@ -4,10 +4,12 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.models.opening_hour import OpeningHour
 
 if TYPE_CHECKING:
     from app.models.service import Service
     from app.models.staff_member import StaffMember
+    from app.models.opening_hour import OpeningHour
 
 
 class Business(Base):
@@ -25,6 +27,12 @@ class Business(Base):
 
     staff_members: Mapped[list["StaffMember"]] = relationship(
         "StaffMember",
+        back_populates="business",
+        cascade="all, delete-orphan",
+    )
+
+    opening_hours: Mapped[list["OpeningHour"]] = relationship(
+        "OpeningHour",
         back_populates="business",
         cascade="all, delete-orphan",
     )

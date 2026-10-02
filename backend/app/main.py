@@ -14,6 +14,7 @@ from app.routers import (
     staff_member,
     absence,
     staff_service,
+    opening_hour,
 )
 
 app = FastAPI(title="Booking API")
@@ -35,7 +36,7 @@ app.include_router(appointment.router)
 app.include_router(staff_member.router)
 app.include_router(absence.router)
 app.include_router(staff_service.router)
-
+app.include_router(opening_hour.router)
 
 
 

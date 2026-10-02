@@ -4,8 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.crud import create_appointment
+from app.crud.appointment import get_appointments_for_date
 from app.dependencies import get_db
-from app.schemas import AppointmentCreate, AppointmentRead, AvailableSlotRead
+from app.schemas import (
+    AppointmentAgendaRead,
+    AppointmentCreate,
+    AppointmentRead,
+    AvailableSlotRead,
+)
 from app.services.service_catalog import get_service_or_404
 from app.services.staff_service import (
     check_staff_can_perform_service,
@@ -27,6 +33,44 @@ def create_appointment_endpoint(
     db: Session = Depends(get_db),
 ):
     return create_appointment(db, business_id, appointment)
+
+
+@router.get(
+    "",
+    response_model=list[AppointmentAgendaRead],
+)
+def get_appointments_endpoint(
+    business_id: int,
+    target_date: date,
+    db: Session = Depends(get_db),
+):
+    """
+    Retourne les rendez-vous enrichis nécessaires à l'agenda du back-office.
+    """
+    rows = get_appointments_for_date(
+        db,
+        business_id,
+        target_date,
+    )
+
+    return [
+        AppointmentAgendaRead(
+            id=appointment.id,
+            business_id=appointment.business_id,
+            service_id=appointment.service_id,
+            service_name=service.name,
+            staff_member_id=appointment.staff_member_id,
+            staff_first_name=staff_member.first_name,
+            staff_last_name=staff_member.last_name,
+            customer_name=appointment.customer_name,
+            customer_email=appointment.customer_email,
+            customer_phone=appointment.customer_phone,
+            start_datetime=appointment.start_datetime,
+            end_datetime=appointment.end_datetime,
+            status=appointment.status,
+        )
+        for appointment, service, staff_member in rows
+    ]
 
 @router.get(
     "/available-slots",

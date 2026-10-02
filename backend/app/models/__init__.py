@@ -7,6 +7,7 @@ from app.models.staff_member import StaffMember
 from app.models.absence import Absence
 from app.models.schedule_override import ScheduleOverride
 from app.models.staff_service import StaffService
+from app.models.opening_hour import OpeningHour
 
 __all__ = [
     "Base",
@@ -17,5 +18,6 @@ __all__ = [
     "StaffMember",
     "Absence",
     "ScheduleOverride",
-    "StaffService"
+    "StaffService",
+    "OpeningHour",
 ]

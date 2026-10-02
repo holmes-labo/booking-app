@@ -1,10 +1,10 @@
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
-from app.models import Appointment
+from app.models import Appointment, Service, StaffMember
 
 from app.schemas import AppointmentCreate
 
@@ -21,6 +21,42 @@ from app.services.scheduling_service import (
     check_staff_availability,
     is_staff_available_for_appointment,
 )
+
+
+
+def get_appointments_for_date(
+    db: Session,
+    business_id: int,
+    target_date: date,
+):
+    """
+    Retourne les rendez-vous d'une entreprise pour une journée donnée.
+
+    Le service et le professionnel sont récupérés dans la même requête
+    afin de fournir directement les informations nécessaires à l'agenda.
+    Les rendez-vous sont triés chronologiquement.
+    """
+    day_start = datetime.combine(target_date, time.min)
+    day_end = day_start + timedelta(days=1)
+
+    return (
+        db.query(Appointment, Service, StaffMember)
+        .join(
+            Service,
+            Service.id == Appointment.service_id,
+        )
+        .join(
+            StaffMember,
+            StaffMember.id == Appointment.staff_member_id,
+        )
+        .filter(
+            Appointment.business_id == business_id,
+            Appointment.start_datetime >= day_start,
+            Appointment.start_datetime < day_end,
+        )
+        .order_by(Appointment.start_datetime)
+        .all()
+    )
 
 
 
