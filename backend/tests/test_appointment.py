@@ -4,6 +4,7 @@ from app.crud.appointment import create_appointment
 from app.models import (
     Appointment,
     Availability,
+    OpeningHour,
     Service,
     StaffMember,
     StaffService,
@@ -36,7 +37,18 @@ def test_create_valid_appointment(
         end_time=time(18, 0),
     )
 
-    db_session.add_all([service, availability])
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add_all([
+        service,
+        availability,
+        opening_hour,
+    ])
     db_session.commit()
     db_session.refresh(service)
 
@@ -92,7 +104,18 @@ def test_create_overlapping_appointment_is_rejected(
         end_time=time(18, 0),
     )
 
-    db_session.add_all([service, availability])
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add_all([
+        service,
+        availability,
+        opening_hour,
+    ])
     db_session.commit()
     db_session.refresh(service)
 
@@ -257,7 +280,18 @@ def test_automatic_mode_assigns_available_staff_member(
         end_time=time(18, 0),
     )
 
-    db_session.add_all([staff_service, availability])
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add_all([
+        staff_service,
+        availability,
+        opening_hour,
+    ])
     db_session.commit()
 
     appointment_data = AppointmentCreate(
@@ -320,6 +354,12 @@ def test_automatic_mode_skips_unavailable_staff_member(
         Availability(
             business_id=business.id,
             staff_member_id=second_staff.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
+        OpeningHour(
+            business_id=business.id,
             weekday=0,
             start_time=time(9, 0),
             end_time=time(18, 0),
@@ -446,6 +486,12 @@ def test_optional_mode_respects_customer_staff_choice(
             start_time=time(9, 0),
             end_time=time(18, 0),
         ),
+        OpeningHour(
+            business_id=business.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
     ])
 
     db_session.commit()
@@ -493,6 +539,12 @@ def test_optional_mode_assigns_staff_when_customer_has_no_preference(
         Availability(
             business_id=business.id,
             staff_member_id=staff_member.id,
+            weekday=0,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+        ),
+        OpeningHour(
+            business_id=business.id,
             weekday=0,
             start_time=time(9, 0),
             end_time=time(18, 0),
@@ -554,4 +606,70 @@ def test_automatic_mode_rejects_customer_staff_choice(
     assert (
         exc_info.value.detail
         == "A staff member cannot be selected for this service"
+    )
+
+
+def test_create_appointment_outside_business_opening_hours_is_rejected(
+    db_session,
+    business_and_staff,
+):
+    business, staff_member = business_and_staff
+
+    service = Service(
+        business_id=business.id,
+        name="Coupe femme",
+        duration_minutes=45,
+        price=35,
+        staff_assignment_mode="optional",
+    )
+
+    availability = Availability(
+        business_id=business.id,
+        staff_member_id=staff_member.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(18, 0),
+    )
+
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(10, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add_all([
+        service,
+        availability,
+        opening_hour,
+    ])
+    db_session.commit()
+    db_session.refresh(service)
+
+    staff_service = StaffService(
+        staff_member_id=staff_member.id,
+        service_id=service.id,
+    )
+    db_session.add(staff_service)
+    db_session.commit()
+
+    appointment_data = AppointmentCreate(
+        service_id=service.id,
+        staff_member_id=staff_member.id,
+        customer_name="Client test",
+        customer_email="client@example.com",
+        start_datetime=datetime(2026, 9, 28, 9, 0),
+    )
+
+    with pytest.raises(HTTPException) as exception:
+        create_appointment(
+            db_session,
+            business.id,
+            appointment_data,
+        )
+
+    assert exception.value.status_code == 409
+    assert (
+        exception.value.detail
+        == "Appointment is outside business opening hours"
     )

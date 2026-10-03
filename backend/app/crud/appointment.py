@@ -15,8 +15,10 @@ from app.services.staff_service import (
     get_staff_member_or_404,
     get_staff_members_for_service,
 )
+
 from app.services.scheduling_service import (
     check_appointment_conflict,
+    check_business_opening_hours,
     check_staff_absence,
     check_staff_availability,
     is_staff_available_for_appointment,
@@ -151,6 +153,15 @@ def create_appointment(
     end_datetime = appointment.start_datetime + timedelta(
         minutes=service.duration_minutes
     )
+    # Un rendez-vous doit rester entièrement dans les horaires
+    # d'ouverture de l'entreprise.
+    check_business_opening_hours(
+        db,
+        business_id,
+        appointment.start_datetime,
+        end_datetime,
+    )
+    
 
     check_staff_availability(
         db,

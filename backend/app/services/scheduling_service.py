@@ -7,8 +7,37 @@ from app.models import (
     Absence,
     Appointment,
     Availability,
+    OpeningHour,
     ScheduleOverride,
 )
+
+
+def check_business_opening_hours(
+    db: Session,
+    business_id: int,
+    start_datetime: datetime,
+    end_datetime: datetime,
+) -> None:
+    """
+    Vérifie que le rendez-vous est entièrement compris dans
+    une plage d'ouverture de l'entreprise.
+    """
+    opening_hour = (
+        db.query(OpeningHour)
+        .filter(
+            OpeningHour.business_id == business_id,
+            OpeningHour.weekday == start_datetime.weekday(),
+            OpeningHour.start_time <= start_datetime.time(),
+            OpeningHour.end_time >= end_datetime.time(),
+        )
+        .first()
+    )
+
+    if opening_hour is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Appointment is outside business opening hours",
+        )
 
 def check_staff_availability(
     db: Session,
@@ -127,6 +156,13 @@ def is_staff_available_for_appointment(
 ) -> bool:
 
     try:
+        check_business_opening_hours(
+            db,
+            business_id,
+            start_datetime,
+            end_datetime,
+        )
+
         check_staff_availability(
             db,
             business_id,

@@ -7,12 +7,14 @@ from app.models import (
     Absence,
     Appointment,
     Availability,
+    OpeningHour,
     ScheduleOverride,
     Service,
 )
 
 from app.services.scheduling_service import (
     check_appointment_conflict,
+    check_business_opening_hours,
     check_staff_absence,
     check_staff_availability,
 )
@@ -235,4 +237,39 @@ def test_schedule_override_replaces_weekly_availability(
     assert (
         exception.value.detail
         == "Appointment is outside staff member availability"
+    )
+
+
+
+def test_appointment_outside_business_opening_hours(
+    db_session,
+    business_and_staff,
+):
+    business, _ = business_and_staff
+
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(10, 0),
+        end_time=time(18, 0),
+    )
+
+    db_session.add(opening_hour)
+    db_session.commit()
+
+    start_datetime = datetime(2026, 9, 28, 9, 0)
+    end_datetime = datetime(2026, 9, 28, 9, 45)
+
+    with pytest.raises(HTTPException) as exception:
+        check_business_opening_hours(
+            db=db_session,
+            business_id=business.id,
+            start_datetime=start_datetime,
+            end_datetime=end_datetime,
+        )
+
+    assert exception.value.status_code == 409
+    assert (
+        exception.value.detail
+        == "Appointment is outside business opening hours"
     )

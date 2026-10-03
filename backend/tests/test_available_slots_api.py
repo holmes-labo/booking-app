@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.dependencies import get_db
 from app.main import app
-from app.models import Availability, Service, StaffMember, StaffService
+from app.models import Availability, Service, StaffMember, StaffService, OpeningHour
 
 def test_customer_choice_requires_staff_member_for_available_slots(
     db_session,
@@ -37,7 +37,18 @@ def test_customer_choice_requires_staff_member_for_available_slots(
         end_time=time(18, 0),
     )
 
-    db_session.add_all([staff_service, availability])
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+
+    db_session.add_all([
+        staff_service,
+        availability,
+        opening_hour,
+    ])
     db_session.commit()
 
     def override_get_db():
@@ -138,7 +149,18 @@ def test_optional_mode_returns_available_slots_without_staff_choice(
         end_time=time(10, 0),
     )
 
-    db_session.add_all([staff_service, availability])
+    opening_hour = OpeningHour(
+        business_id=business.id,
+        weekday=0,
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+
+    db_session.add_all([
+        staff_service,
+        availability,
+        opening_hour,
+    ])
     db_session.commit()
 
     def override_get_db():
@@ -224,6 +246,12 @@ def test_automatic_mode_deduplicates_slots_and_hides_staff_member(
                 start_time=time(9, 0),
                 end_time=time(10, 0),
             ),
+            OpeningHour(
+                business_id=business.id,
+                weekday=0,
+                start_time=time(9, 0),
+                end_time=time(10, 0),
+            ),
         ]
     )
     db_session.commit()
@@ -288,6 +316,12 @@ def test_booked_slot_is_no_longer_available(
             Availability(
                 business_id=business.id,
                 staff_member_id=staff_member.id,
+                weekday=0,
+                start_time=time(9, 0),
+                end_time=time(11, 0),
+            ),
+            OpeningHour(
+                business_id=business.id,
                 weekday=0,
                 start_time=time(9, 0),
                 end_time=time(11, 0),
